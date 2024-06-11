@@ -1,45 +1,34 @@
-'use client';
+"use client";
 
-import { Form, FormControl, FormField, FormItem } from './ui/form';
-import { Input } from './ui/input';
-import { Button } from './ui/button';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { cn } from '@/lib/utils';
-import ErrorAlert from './error-alert';
-import { useState } from 'react';
-
-const formSchema = z.object({
-  url: z
-    .string()
-    .min(1, 'Field Required')
-    .regex(
-      /^(https:\/\/)(www\.)?github\.com\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\/?$/,
-      // /^(https:\/\/)(www\.)?github\.com\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+.*\/?$/, // This regex includes the possibility of having a path & query params after the repo name
-      'Not a valid Github Repo URL'
-    ),
-});
+import { Form, FormControl, FormField, FormItem, FormMessage } from "./ui/form";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { urlFormSchema } from "@/lib/schema";
 
 async function fetchRepoIssues(inputUrl: string) {
   const url = new URL(inputUrl);
-  const [, owner, repo] = url.pathname.split('/');
+  const [, owner, repo] = url.pathname.split("/");
 
   return fetch(`https://api.github.com/repos/${owner}/${repo}/issues`);
 }
 
-interface GithubUrlFormProps {
+type GithubUrlFormProps = {
   className?: string;
-}
+};
 
 export default function GithubUrlForm({ className }: GithubUrlFormProps) {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<z.infer<typeof urlFormSchema>>({
+    resolver: zodResolver(urlFormSchema),
   });
 
   const [invalidRepoError, setInvalidRepoError] = useState(false);
 
-  async function onSubmit(data: z.infer<typeof formSchema>) {
+  async function onSubmit(data: z.infer<typeof urlFormSchema>) {
     try {
       const res = await fetchRepoIssues(data.url);
 
@@ -50,7 +39,7 @@ export default function GithubUrlForm({ className }: GithubUrlFormProps) {
 
       console.log(await res.json());
     } catch {
-      console.log('An unexpected error occured, please try again later.');
+      console.log("An unexpected error occured, please try again later.");
     }
   }
 
@@ -59,28 +48,26 @@ export default function GithubUrlForm({ className }: GithubUrlFormProps) {
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className={cn('space-y-2', className)}
+          className={cn("space-y-2", className)}
         >
-          {(form.formState.errors.url && (
-            <ErrorAlert>{form.formState.errors.url.message}</ErrorAlert>
-          )) ||
-            (invalidRepoError && (
-              <ErrorAlert>Repository does not exist</ErrorAlert>
-            ))}
-          <div className='flex gap-x-4'>
+          <div className="flex gap-x-4">
             <FormField
               control={form.control}
-              name='url'
+              name="url"
               render={({ field }) => (
-                <FormItem className='grow'>
+                <FormItem className="grow">
                   <FormControl onChange={() => setInvalidRepoError(false)}>
-                    <Input placeholder='Enter the Github URL here' {...field} />
+                    <Input placeholder="Enter the Github URL here" {...field} />
                   </FormControl>
+                  <FormMessage />
+                  {!form.formState.errors.url && invalidRepoError && (
+                    <FormMessage>Repository does not exist</FormMessage>
+                  )}
                 </FormItem>
               )}
             />
-            <Button type='submit' disabled={!form.getValues('url')}>
-              Fetch
+            <Button type="submit" disabled={!form.getValues("url")}>
+              Fetch Issues
             </Button>
           </div>
         </form>
