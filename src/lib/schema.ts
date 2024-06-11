@@ -6,8 +6,7 @@ export const urlFormSchema = z.object({
     .min(1, "Field Required")
     .url("Not a valid Github Repo URL")
     .regex(
-      /^(https:\/\/)(www\.)?github\.com\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\/?$/,
-      // /^(https:\/\/)(www\.)?github\.com\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+.*\/?$/, // This regex includes the possibility of having a path & query params after the repo name
+      /^(https:\/\/)(www\.)?github\.com\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+.*\/?$/, // This regex includes the possibility of having a path & query params after the repo name
       "Not a valid Github Repo URL"
     ),
 });
