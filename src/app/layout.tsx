@@ -1,7 +1,5 @@
-import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
-import { ReactQueryClientProvider } from "@/lib/reactquery-client-provider";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import Providers from "@/lib/providers";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -19,21 +17,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ReactQueryClientProvider>
-      <html lang="en">
-        <body className={inter.className}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-            <Toaster />
-          </ThemeProvider>
-          <ReactQueryDevtools initialIsOpen={false} />
-        </body>
-      </html>
-    </ReactQueryClientProvider>
+    <html lang="en">
+      <body className={inter.className}>
+        <Providers>
+          {children}
+          <Toaster />
+        </Providers>
+      </body>
+    </html>
   );
 }
