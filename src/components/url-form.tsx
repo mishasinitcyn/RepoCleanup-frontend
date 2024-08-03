@@ -36,10 +36,8 @@ export default function GithubUrlForm({ className }: GithubUrlFormProps) {
   const { data: issues, error, isError, isLoading, isSuccess } = useIssues(url);
 
   const onSubmit = (data: FormValues) => {
-    if (data.url !== url) {
-      queryClient.removeQueries({ queryKey: ["github-issues"] });
-      setUrl(data.url);
-    }
+    queryClient.removeQueries({ queryKey: ["github-issues"] });
+    setUrl(data.url);
   };
 
   // Handle validation errors and show toasts

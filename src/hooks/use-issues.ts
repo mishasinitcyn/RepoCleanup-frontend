@@ -4,7 +4,7 @@ import { urlFormSchema } from "@/lib/schema";
 import { RequestError } from "@octokit/request-error";
 import { Octokit } from "@octokit/rest";
 import { Endpoints } from "@octokit/types";
-import { useQuery, UseQueryResult } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 type ListIssuesResponseData =
   Endpoints["GET /repos/{owner}/{repo}/issues"]["response"]["data"];
@@ -80,15 +80,38 @@ const fetchIssues = async (url: string): Promise<ListIssuesResponseData> => {
   }
 };
 
-export const useIssues = (
-  url: string
-): UseQueryResult<ListIssuesResponseData, Error> => {
+export const useIssues = (url: string) => {
   return useQuery({
     queryKey: ["github-issues", url],
     queryFn: () => fetchIssues(url),
     enabled: url.trim() !== "" && urlFormSchema.safeParse({ url }).success,
-    staleTime: Infinity,
-    retry: false,
-    refetchOnWindowFocus: false, // Disable refetch on window focus
+    staleTime: 1000 * 60 * 30, // 30 minutes
+    retry: (failureCount, error) => {
+      // Don't retry if the error is due to invalid URL, private repo, or authentication issues
+      if (error instanceof Error) {
+        if (
+          error.message.includes("Invalid GitHub repository URL") ||
+          error.message.includes("This repository is private") ||
+          error.message.includes("Authentication failed")
+        ) {
+          return false;
+        }
+      }
+
+      // Retry on network errors or rate limiting, up to 3 times
+      if (error instanceof RequestError) {
+        if (
+          error.status === 403 ||
+          error.status === 429 ||
+          error.status >= 500
+        ) {
+          return failureCount < 3;
+        }
+      }
+
+      // Don't retry for other errors
+      return false;
+    },
+    refetchOnWindowFocus: false,
   });
 };
