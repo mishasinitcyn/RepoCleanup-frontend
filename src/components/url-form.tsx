@@ -1,10 +1,13 @@
 "use client";
 
 import { useToast } from "@/components/ui/use-toast";
+import { useIssues } from "@/hooks/use-issues";
 import { urlFormSchema } from "@/lib/schema";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { FieldErrors, useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "./ui/button";
 import { Form, FormControl, FormField, FormItem } from "./ui/form";
@@ -12,69 +15,59 @@ import { Input } from "./ui/input";
 import Squiggly1 from "./ui/squiggly1";
 import Squiggly2 from "./ui/squiggly2";
 
-async function fetchRepoIssues(inputUrl: string) {
-  const url = new URL(inputUrl);
-  const [, owner, repo] = url.pathname.split("/");
-
-  const response = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/issues`
-  );
-  return response;
-}
-
 type GithubUrlFormProps = {
   className?: string;
 };
 
+type FormValues = z.infer<typeof urlFormSchema>;
+
 export default function GithubUrlForm({ className }: GithubUrlFormProps) {
-  const form = useForm<z.infer<typeof urlFormSchema>>({
+  const [url, setUrl] = useState<string>("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const form = useForm<FormValues>({
     resolver: zodResolver(urlFormSchema),
     defaultValues: {
       url: "",
     },
   });
 
-  const { toast } = useToast();
+  const { data: issues, error, isError, isLoading, isSuccess } = useIssues(url);
 
-  async function onSubmit(data: z.infer<typeof urlFormSchema>) {
-    console.log("Form submitted with data:", data);
-    try {
-      const res = await fetchRepoIssues(data.url);
+  const onSubmit = (data: FormValues) => {
+    queryClient.removeQueries({ queryKey: ["github-issues"] });
+    setUrl(data.url);
+  };
 
-      if (res.status === 404) {
+  // Handle validation errors and show toasts
+  const handleValidationErrors = (errors: FieldErrors<FormValues>) => {
+    Object.values(errors).forEach((error) => {
+      if (error && error.message) {
         toast({
-          title: "Uh oh! Repository does not exist",
-          description: "Make sure the repo is public and exists on Github",
+          title: "Uh Oh! Something went wrong",
+          description: error.message,
+          variant: "destructive",
         });
-        return;
       }
+    });
+  };
 
-      console.log(await res.json());
+  // Use effect for showing toasts based on query state
+  useEffect(() => {
+    if (isError && error instanceof Error) {
+      toast({
+        title: "Uh Oh! Something went wrong",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else if (isSuccess) {
       toast({
         title: "Success!",
         description: "Issues fetched successfully",
       });
-    } catch (error) {
-      toast({
-        title: "Uh oh! Something went wrong",
-        description:
-          "There was a problem with your request. Please try again later",
-      });
     }
-  }
-
-  // Handle validation errors and show toasts
-  const handleValidationErrors = (errors: any) => {
-    for (const key in errors) {
-      if (errors.hasOwnProperty(key)) {
-        console.log(errors);
-        toast({
-          title: "Uh oh! Something went wrong",
-          description: errors[key].message,
-        });
-      }
-    }
-  };
+  }, [isError, isSuccess, error, toast, issues]);
 
   return (
     <div className={cn("relative w-full flex justify-center", className)}>
@@ -113,7 +106,9 @@ export default function GithubUrlForm({ className }: GithubUrlFormProps) {
               />
             </div>
 
-            <Button type="submit">Fetch Issues!</Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Fetching..." : "Fetch Issues!"}
+            </Button>
           </form>
         </Form>
       </div>
